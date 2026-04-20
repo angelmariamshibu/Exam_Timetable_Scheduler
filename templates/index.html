@@ -1,69 +1,243 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ExamGrid — DM Timetable Scheduler</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamGrid — DM Timetable Scheduler</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #07070f; --s1: #0f0f1c; --s2: #15152a; --s3: #1c1c35;
+            --border: #252540; --border2: #32325a; --purple: #8b5cf6;
+            --pink: #ec4899; --cyan: #06b6d4; --gold: #f59e0b;
+            --green: #10b981; --text: #e8e8f8; --muted: #6b6b9a; --dim: #3a3a5a;
+        }
 
-<!-- (ALL YOUR CSS REMAINS EXACT SAME — no change needed) -->
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+        .bg-grid { position: fixed; inset: 0; z-index: 0; background-image: linear-gradient(rgba(139,92,246,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.04) 1px, transparent 1px); background-size: 48px 48px; }
+        .orb { position: fixed; border-radius: 50%; z-index: 0; filter: blur(80px); pointer-events: none; }
+        .orb1 { width:500px; height:500px; background:rgba(139,92,246,0.10); top:-150px; left:-150px; }
+        .wrap { position:relative; z-index:1; max-width:1200px; margin:0 auto; padding:2rem 1.5rem; }
+
+        header { text-align:center; padding: 2rem 0 3rem; border-bottom: 1px solid var(--border); margin-bottom: 2.5rem; }
+        .logo-text { font-family:'JetBrains Mono', monospace; font-size:2.6rem; font-weight:700; background: linear-gradient(135deg, #c4b5fd, #f9a8d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .dm-pill { background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.25); border-radius:20px; padding:4px 14px; font-size:0.75rem; color:#c4b5fd; font-family:'JetBrains Mono', monospace; margin: 4px; display: inline-block; }
+
+        .main-grid { display:grid; grid-template-columns: 380px 1fr; gap:1.5rem; align-items:start; }
+        @media(max-width:900px) { .main-grid { grid-template-columns:1fr; } }
+
+        .panel { background:var(--s1); border:1px solid var(--border); border-radius:20px; overflow:hidden; }
+        .panel-header { padding:1rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+        .panel-title { font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:2px; }
+        .panel-body { padding:1.5rem; }
+
+        .input-row { display:flex; gap:8px; margin-bottom:1rem; }
+        input[type=text], select { flex:1; background:var(--s2); border:1px solid var(--border); border-radius:12px; padding:0.65rem 1rem; color:var(--text); outline:none; transition:0.2s; }
+        input[type=text]:focus { border-color:var(--purple); box-shadow:0 0 0 3px rgba(139,92,246,0.15); }
+
+        .btn { background:var(--purple); color:#fff; border:none; border-radius:12px; padding:0.65rem 1.2rem; cursor:pointer; font-weight:500; transition:0.2s; }
+        .btn:hover { transform:translateY(-1px); box-shadow:0 4px 15px rgba(139,92,246,0.3); }
+        .btn-run { width:100%; padding:1rem; font-size:1rem; font-weight:600; background:linear-gradient(135deg, var(--purple), var(--pink)); margin-top:1rem; }
+
+        .chip { display:inline-flex; align-items:center; gap:6px; background:var(--s3); border:1px solid var(--border2); border-radius:8px; padding:4px 10px; font-size:0.82rem; margin: 3px; }
+        .chip-x { cursor:pointer; color:var(--muted); font-size:1.1rem; }
+        .chip-x:hover { color:var(--pink); }
+
+        .conflict-item { display:flex; align-items:center; justify-content:space-between; background:var(--s2); border:1px solid var(--border); border-radius:10px; padding:6px 12px; font-size:0.82rem; margin-bottom: 5px;}
+
+        .tab-row { display:flex; gap:4px; padding:0.8rem 1.5rem 0; border-bottom: 1px solid var(--border); }
+        .tab { padding:0.45rem 1rem; cursor:pointer; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:0.82rem; }
+        .tab.active { color:var(--purple); border-bottom: 2px solid var(--purple); }
+        .tab-content { display:none; padding: 1.5rem; }
+        .tab-content.active { display:block; }
+
+        #graphImg { width:100%; border-radius:12px; background:var(--s2); }
+        .img-placeholder { width:100%; height:280px; background:var(--s2); border:1px dashed var(--border2); border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--dim); text-align:center; }
+        
+        .slot-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px; }
+        .slot-card { border-radius:14px; padding:1rem; border:1px solid rgba(255,255,255,0.08); }
+        
+        .algo-box { background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:1.2rem; font-family:'JetBrains Mono',monospace; font-size:0.78rem; line-height:2; white-space: pre-wrap; }
+        .matrix-table { border-collapse:collapse; width:100%; font-family:'JetBrains Mono',monospace; font-size:0.75rem; }
+        .matrix-table td, .matrix-table th { padding:8px; border:1px solid var(--border); text-align:center; }
+        .one { background: rgba(245,158,11,0.1); color: var(--gold); }
+
+        #loader { display:none; text-align:center; padding:2rem; }
+        .spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--purple); border-radius:50%; animation:spin 0.8s linear infinite; margin: 0 auto 10px; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+    </style>
 </head>
-
 <body>
+    <div class="bg-grid"></div>
+    <div class="orb orb1"></div>
 
-<!-- (ALL YOUR EXISTING HTML BODY REMAINS SAME — no change needed) -->
+    <div class="wrap">
+        <header>
+            <div class="logo-text">🎓 ExamGrid</div>
+            <div style="color:var(--muted); margin-top:10px;">Clash-Free Exam Timetable Scheduler (Graph Coloring)</div>
+            <div style="margin-top:15px;">
+                <span class="dm-pill">Graph G=(V,E)</span><span class="dm-pill">Greedy Coloring</span><span class="dm-pill">Warshall's</span>
+            </div>
+        </header>
+
+        <div class="main-grid">
+            <div style="display:flex; flex-direction:column; gap:1.2rem;">
+                <div class="panel">
+                    <div class="panel-header"><div class="panel-title">1. Subjects</div></div>
+                    <div class="panel-body">
+                        <div class="input-row">
+                            <input type="text" id="subjectInput" placeholder="Enter Subject Name">
+                            <button class="btn" onclick="addSubject()">Add</button>
+                        </div>
+                        <div id="subjectChips"></div>
+                        <div style="margin-top:10px;">
+                            <button class="btn btn-run" style="background:var(--s3); font-size:0.8rem; padding:8px;" onclick="loadSample()">⚡ Load Demo Data</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><div class="panel-title">2. Conflicts (Edges)</div></div>
+                    <div class="panel-body">
+                        <div class="input-row">
+                            <select id="sel1"></select>
+                            <select id="sel2"></select>
+                        </div>
+                        <button class="btn" style="width:100%" onclick="addConflict()">Add Clash Edge</button>
+                        <div id="conflictList" style="margin-top:15px;"></div>
+                    </div>
+                </div>
+
+                <button class="btn btn-run" onclick="runScheduler()">▶ Generate Timetable</button>
+            </div>
+
+            <div class="panel">
+                <div class="tab-row">
+                    <div class="tab active" onclick="switchTab('graph')">Graph</div>
+                    <div class="tab" onclick="switchTab('tt')">Timetable</div>
+                    <div class="tab" onclick="switchTab('algo')">Trace</div>
+                    <div class="tab" onclick="switchTab('mat')">Matrix</div>
+                </div>
+
+                <div id="tab-graph" class="tab-content active">
+                    <div id="graphPlaceholder" class="img-placeholder">Visualization will appear here</div>
+                    <div id="loader"><div class="spinner"></div>Computing...</div>
+                    <img id="graphImg" style="display:none;">
+                </div>
+
+                <div id="tab-tt" class="tab-content">
+                    <div id="ttContent"></div>
+                </div>
+
+                <div id="tab-algo" class="tab-content">
+                    <div id="algoBox" class="algo-box"></div>
+                </div>
+
+                <div id="tab-mat" class="tab-content">
+                    <div id="matrixWrap"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 <script>
-const SLOT_COLORS = ['#7c3aed','#db2777','#0891b2','#d97706','#059669','#dc2626','#2563eb','#65a30d'];
-const SLOT_NAMES  = ['9:00 AM','11:00 AM','2:00 PM','4:00 PM','9:00 AM Day 2','11:00 AM Day 2','2:00 PM Day 2','4:00 PM Day 2'];
+    let subjects = [];
+    let conflicts = [];
+    const SLOT_COLORS = ['#7c3aed','#db2777','#0891b2','#d97706','#059669','#dc2626','#2563eb','#65a30d'];
 
-let subjects = [], conflicts = [];
-
-// ── Run Scheduler ──
-async function runScheduler() {
-  if (subjects.length < 2) { 
-    alert('Please add at least 2 subjects!'); 
-    return; 
-  }
-
-  document.getElementById('loader').style.display='block';
-  document.getElementById('graphImg').style.display='none';
-  document.getElementById('graphPlaceholder').style.display='none';
-  switchTab('graph');
-
-  try {
-    // ✅ FIXED FETCH (WORKS ON RENDER)
-    const res = await fetch("/schedule", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subjects, conflicts })
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("Backend error:", errText);
-      alert("Backend error. Check console.");
-      return;
+    function switchTab(name) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('tab-' + name).classList.add('active');
     }
 
-    const data = await res.json();
-    renderResults(data);
+    function addSubject() {
+        const val = document.getElementById('subjectInput').value.trim();
+        if(val && !subjects.includes(val)) {
+            subjects.push(val);
+            render();
+        }
+        document.getElementById('subjectInput').value = '';
+    }
 
-  } catch (e) {
-    console.error("Connection error:", e);
-    alert("Cannot connect to server. Check Render deployment.");
-  } finally {
-    document.getElementById('loader').style.display='none';
-  }
-}
+    function addConflict() {
+        const s1 = document.getElementById('sel1').value;
+        const s2 = document.getElementById('sel2').value;
+        if(s1 && s2 && s1 !== s2) {
+            conflicts.push([s1, s2]);
+            render();
+        }
+    }
 
-// ── KEEP ALL YOUR OTHER FUNCTIONS SAME ──
-// addSubject(), renderResults(), etc.
-// NO CHANGES REQUIRED THERE
+    function loadSample() {
+        subjects = ['Math', 'Physics', 'Chem', 'CS', 'Stats'];
+        conflicts = [['Math','Physics'], ['Math','Chem'], ['CS','Math'], ['Stats','Math']];
+        render();
+    }
 
+    function render() {
+        const chips = document.getElementById('subjectChips');
+        chips.innerHTML = subjects.map(s => `<div class="chip">${s}</div>`).join('');
+        
+        const s1 = document.getElementById('sel1');
+        const s2 = document.getElementById('sel2');
+        const opts = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+        s1.innerHTML = s2.innerHTML = '<option value="">Select Subject</option>' + opts;
+
+        const cl = document.getElementById('conflictList');
+        cl.innerHTML = conflicts.map(c => `<div class="conflict-item">${c[0]} ↔ ${c[1]}</div>`).join('');
+    }
+
+    async function runScheduler() {
+        if(subjects.length < 2) return alert("Add at least 2 subjects");
+        
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('graphPlaceholder').style.display = 'none';
+        document.getElementById('graphImg').style.display = 'none';
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/schedule', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ subjects, conflicts })
+            });
+            const data = await response.json();
+            
+            // Render Graph
+            const img = document.getElementById('graphImg');
+            img.src = 'data:image/png;base64,' + data.graph_image;
+            img.style.display = 'block';
+
+            // Render Timetable
+            const tt = document.getElementById('ttContent');
+            tt.innerHTML = `<div class="slot-grid">` + Object.entries(data.room_allocation).map(([slot, rooms]) => {
+                let subs = [];
+                for(let r in rooms) subs.push(...rooms[r]);
+                return `<div class="slot-card" style="border-left: 4px solid ${SLOT_COLORS[slot % 8]}">
+                    <small style="color:var(--muted)">SLOT ${parseInt(slot)+1}</small>
+                    <div style="font-weight:bold">${subs.join(', ')}</div>
+                </div>`;
+            }).join('') + `</div>`;
+
+            // Render Trace
+            document.getElementById('algoBox').innerHTML = data.algorithm_steps.map(s => `> ${s.message}\n  ${s.detail}`).join('\n\n');
+
+            // Render Matrix
+            let mHtml = '<table class="matrix-table"><tr><th></th>' + subjects.map(s => `<th>${s}</th>`).join('') + '</tr>';
+            data.adjacency_matrix.forEach((row, i) => {
+                mHtml += `<tr><th>${subjects[i]}</th>` + row.map(v => `<td class="${v?'one':''}">${v}</td>`).join('') + '</tr>';
+            });
+            document.getElementById('matrixWrap').innerHTML = mHtml + '</table>';
+
+        } catch (err) {
+            alert("Error: Ensure Python backend is running!");
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+        }
+    }
 </script>
-
 </body>
 </html>
-```
-
