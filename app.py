@@ -308,7 +308,7 @@ def index():
 
 @app.route('/schedule', methods=['POST'])
 def schedule():
-    print(" /schedule endpoint was called")
+    print("/schedule HIT")
 
     data = request.get_json()
     data = request.get_json()
